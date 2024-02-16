@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  mongo:
+    image: mongo:4.2.3
+    container_name: gdscKOU
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: gdsc
+      MONGO_INITDB_ROOT_PASSWORD: 41gdsc34ozi41
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
