@@ -8,7 +8,7 @@ const app = express();
 const path = require('path');
 const PORT = process.env.PORT || 3000;
 
-const serverIP = '87.248.157.166';
+const serverIP = '0.0.0.0';
 connectDB(); // MongoDB bağlantısını başlat
 
 app.use(bodyParser.json({ limit: '50mb' }));
