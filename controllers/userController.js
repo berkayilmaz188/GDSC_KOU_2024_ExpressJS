@@ -195,8 +195,8 @@ exports.updateUser = async (req, res) => {
   if (name) updateFields.name = name;
   if (surname) updateFields.surname = surname;
   if (phoneNumber) updateFields.phoneNumber = phoneNumber;
-  if (username) updateFields.phoneNumber = username;
-  
+  if (username) updateFields.username = username;
+
   try {
     let user = await User.findById(req.user.id);
     if (!user) {
