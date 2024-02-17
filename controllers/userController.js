@@ -187,7 +187,7 @@ exports.login = async (req, res) => {
 };
 
 exports.updateUser = async (req, res) => {
-  const { email, name, surname, phoneNumber, city } = req.body;
+  const { email, name, surname, phoneNumber } = req.body;
   let updateFields = {};
 
   // Sadece dolu olan alanları güncelleme nesnesine ekle
@@ -195,7 +195,6 @@ exports.updateUser = async (req, res) => {
   if (name) updateFields.name = name;
   if (surname) updateFields.surname = surname;
   if (phoneNumber) updateFields.phoneNumber = phoneNumber;
-  if (city) updateFields.city = city;
 
   try {
     let user = await User.findById(req.user.id);
