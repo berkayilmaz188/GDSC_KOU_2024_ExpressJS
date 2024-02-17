@@ -5,7 +5,8 @@ const updateUserValidation = (data) => {
       email: Joi.string().email().allow(null, ''), // Boş string veya null izin ver
       name: Joi.string().min(1).allow(null, ''), // Boş string veya null izin ver
       surname: Joi.string().min(1).allow(null, ''), // Boş string veya null izin ver
-      phoneNumber: Joi.string().min(1).allow(null, '') // Boş string veya null izin ver
+      phoneNumber: Joi.string().min(1).allow(null, ''), // Boş string veya null izin ver
+      username: Joi.string().min(1).allow(null, '') // Boş string veya null izin ver
     }).min(1); // En az bir alanın dolu olması gerekiyor
   
     return schema.validate(data, { presence: 'required' }); // En az bir alan gereklidir
