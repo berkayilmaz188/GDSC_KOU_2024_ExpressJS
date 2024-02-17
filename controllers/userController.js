@@ -187,46 +187,29 @@ exports.login = async (req, res) => {
 };
 
 exports.updateUser = async (req, res) => {
-  const { email, name, surname, phoneNumber } = req.body;
+  const { email, name, surname, phoneNumber, city } = req.body;
   let updateFields = {};
-  
-  // Dolu alanları güncelleme nesnesine ekle
-  if (email !== undefined) updateFields.email = email;
-  if (name !== undefined) updateFields.name = name;
-  if (surname !== undefined) updateFields.surname = surname;
-  if (phoneNumber !== undefined) updateFields.phoneNumber = phoneNumber;
 
+  // Sadece dolu olan alanları güncelleme nesnesine ekle
+  if (email) updateFields.email = email;
+  if (name) updateFields.name = name;
+  if (surname) updateFields.surname = surname;
+  if (phoneNumber) updateFields.phoneNumber = phoneNumber;
+  if (city) updateFields.city = city;
 
   try {
-    const user = await User.findById(req.user.id);
+    let user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, msg: 'User not found.' });
     }
 
-    // Güncellemeden önceki bilgileri sakla
-    const beforeUpdate = {
-      email: user.email,
-      name: user.name,
-      surname: user.surname,
-      phoneNumber: user.phoneNumber
-    };
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, { $set: updateFields }, { new: true, select: '-password -resetPasswordToken -resetPasswordExpire -longitude -latitude -isVerified -location -city' });
 
-    const updatedUser = await User.findByIdAndUpdate(req.user.id, { $set: updateFields }, { new: true });
-
-    // Güncellemeden sonraki bilgilerle karşılaştır ve değişiklikleri bul
-    const changes = {};
-    Object.keys(updateFields).forEach(field => {
-      if (beforeUpdate[field] !== updatedUser[field]) {
-        changes[field] = { before: beforeUpdate[field], after: updatedUser[field] };
-      }
-    });
-
-    res.status(200).json({ success: true, msg: 'User updated successfully.', changes: changes });
+    res.status(200).json({ success: true, msg: 'User updated successfully.', user: updatedUser });
   } catch (err) {
     res.status(500).json({ success: false, msg: 'Server error', error: err.message });
   }
 };
-
 
 exports.userLocationUpdate = async (req, res) => {
   const { city, location, longitude, latitude } = req.body;
