@@ -187,7 +187,7 @@ exports.login = async (req, res) => {
 };
 
 exports.updateUser = async (req, res) => {
-  const { email, name, surname, phoneNumber, city } = req.body;
+  const { email, name, surname, phoneNumber } = req.body;
   let updateFields = {};
   
   // Dolu alanları güncelleme nesnesine ekle
@@ -195,7 +195,7 @@ exports.updateUser = async (req, res) => {
   if (name !== undefined) updateFields.name = name;
   if (surname !== undefined) updateFields.surname = surname;
   if (phoneNumber !== undefined) updateFields.phoneNumber = phoneNumber;
-  if (city !== undefined) updateFields.city = city;
+
 
   try {
     const user = await User.findById(req.user.id);
@@ -208,8 +208,7 @@ exports.updateUser = async (req, res) => {
       email: user.email,
       name: user.name,
       surname: user.surname,
-      phoneNumber: user.phoneNumber,
-      city: user.city
+      phoneNumber: user.phoneNumber
     };
 
     const updatedUser = await User.findByIdAndUpdate(req.user.id, { $set: updateFields }, { new: true });
