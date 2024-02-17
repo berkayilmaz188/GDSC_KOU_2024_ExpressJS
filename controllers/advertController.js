@@ -3,12 +3,23 @@ const path = require('path');
 const Advert = require('../models/advertModel'); // Modelin yolu projenize göre değişiklik gösterebilir
 const photosDir = path.join(__dirname, '../photos');
 const sharp = require('sharp');
+const validateCategoryAndTag = require('../validaton/categoriesValidation');
 
 exports.addAdvert = async (req, res) => {
   let savedAdvert;
 
   try {
     const { title, description, category, tag, city, deadTime, point, status, visibility } = req.body;
+
+    // Kategori ve etiketin geçerliliğini kontrol et
+    const isValidCategoryAndTag = await validateCategoryAndTag(category, tag);
+    if (!isValidCategoryAndTag) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid category or tag. Please add the category and tag first."
+      });
+    }
+
     savedAdvert = new Advert({
       owner: req.user.id,
       title,
@@ -61,10 +72,11 @@ exports.addAdvert = async (req, res) => {
       }
     }
 
-    res.status(201).json({ 
+    res.status(201).json({
       success: true,
-      message: "The ad has been added successfully.", 
-      advert: savedAdvert });
+      message: "The ad has been added successfully.",
+      advert: savedAdvert
+    });
   } catch (error) {
     console.error("İlan eklenirken bir hata oluştu:", error);
     // İlan eklenirken bir hata oluştuğunda, önceden eklenen resimleri temizle
@@ -79,7 +91,7 @@ exports.addAdvert = async (req, res) => {
     res.status(500).json({ message: "İlan eklenirken bir hata oluştu.", error: error.message });
   }
 };
-  
+
 
 exports.getAdvert = async (req, res) => {
   try {
@@ -118,16 +130,17 @@ exports.deleteAdvert = async (req, res) => {
     const advert = await Advert.findById(req.params.id);
 
     if (!advert) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 
-        "Advertisement not found." });
+        message:
+          "Advertisement not found."
+      });
     }
 
     if (advert.owner.toString() !== req.user.id) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: "You are not authorized to perform this action." 
+        message: "You are not authorized to perform this action."
       });
     }
 
@@ -144,9 +157,9 @@ exports.deleteAdvert = async (req, res) => {
     // İlanı veritabanından sil
     await Advert.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({ 
+    res.status(200).json({
       success: true,
-      message: "The ad and related images have been successfully deleted." 
+      message: "The ad and related images have been successfully deleted."
     });
   } catch (error) {
     res.status(500).json({ message: "An error occurred while deleting the ad.", error: error.message });
@@ -175,5 +188,74 @@ exports.getAllPublicAdverts = async (req, res) => {
     });
   }
 };
+
+exports.getPublicAdvertsByCity = async (req, res) => {
+  const requestedCity = req.params.city;
+  const userCity = req.user.city; // JWT middleware'inden gelen şehir bilgisini alın
+
+  if (requestedCity !== userCity) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. You can only access adverts in your city."
+    });
+  }
+
+  try {
+    const adverts = await Advert.find({ status: 'active', visibility: 'public', city: requestedCity }).populate('owner', 'username');
+
+    const updatedAdverts = adverts.map(advert => ({
+      ...advert._doc,
+      images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`)
+    }));
+
+    res.status(200).json({
+      success: true,
+      adverts: updatedAdverts
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving public adverts for the specified city.",
+      error: error.message
+    });
+  }
+};
+
+exports.getFilteredAdverts = async (req, res) => {
+  const { category, tag } = req.query; // Query'den category ve tag bilgilerini al
+  const city = req.user.city; // JWT'den şehir bilgisini al
+
+  // Filtreleme için bir MongoDB sorgu nesnesi oluştur
+  let query = {
+    status: 'active',
+    visibility: 'public',
+    city: city
+  };
+
+  // Category ve tag bilgileri varsa sorguya ekle
+  if (category) query.category = category;
+  if (tag) query.tag = tag;
+
+  try {
+    const adverts = await Advert.find(query).populate('owner', 'username');
+
+    const updatedAdverts = adverts.map(advert => ({
+      ...advert._doc,
+      images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`)
+    }));
+
+    res.status(200).json({
+      success: true,
+      adverts: updatedAdverts
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving filtered adverts.",
+      error: error.message
+    });
+  }
+};
+
 
 
