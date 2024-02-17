@@ -48,6 +48,7 @@ const resetPasswordValidation = (data) => {
     return schema.validate(data);
 };
 
+
 module.exports = {
     registerValidation,
     resendActivationEmailValidation,
