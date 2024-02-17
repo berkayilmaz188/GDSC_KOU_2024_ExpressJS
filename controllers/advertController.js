@@ -173,7 +173,7 @@ exports.getAllPublicAdverts = async (req, res) => {
 
     const updatedAdverts = adverts.map(advert => ({
       ...advert._doc,
-      images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`)
+      images: advert.images.map(image => `${image}`)
     }));
 
     res.status(200).json({
@@ -205,7 +205,7 @@ exports.getPublicAdvertsByCity = async (req, res) => {
 
     const updatedAdverts = adverts.map(advert => ({
       ...advert._doc,
-      images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`)
+      images: advert.images.map(image => `${image}`)
     }));
 
     res.status(200).json({
@@ -241,7 +241,7 @@ exports.getFilteredAdverts = async (req, res) => {
 
     const updatedAdverts = adverts.map(advert => ({
       ...advert._doc,
-      images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`)
+      images: advert.images.map(image => `${image}`)
     }));
 
     res.status(200).json({
