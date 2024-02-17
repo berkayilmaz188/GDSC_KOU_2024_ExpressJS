@@ -10,9 +10,9 @@ exports.register = async (req, res) => {
   try {
     const { email, password, username, name, surname, phoneNumber, city, location, longitude, latitude } = req.body;
 
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ $or: [{ email }, { username }, { phoneNumber }] });
     if (user) {
-      return res.status(400).json({ msg: 'Bu e-posta ile zaten bir kullanıcı mevcut.' });
+      return res.status(400).json({ success: false, msg: 'The email, username or phone number is already in use.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 8);
@@ -190,26 +190,38 @@ exports.updateUser = async (req, res) => {
   const { email, name, surname, phoneNumber, username } = req.body;
   let updateFields = {};
 
-  // Sadece dolu olan alanları güncelleme nesnesine ekle
-  if (email) updateFields.email = email;
-  if (name) updateFields.name = name;
-  if (surname) updateFields.surname = surname;
-  if (phoneNumber) updateFields.phoneNumber = phoneNumber;
-  if (username) updateFields.username = username;
-
   try {
     let user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, msg: 'User not found.' });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(req.user.id, { $set: updateFields }, { new: true, select: '-password -resetPasswordToken -resetPasswordExpire -longitude -latitude -isVerified -location -city' });
+    // Kullanıcı mevcut değerlerini güncellemeye çalışmıyorsa benzersizlik kontrolü yap
+    if (email && email !== user.email && await User.findOne({ email })) {
+      return res.status(400).json({ success: false, msg: 'Email already in use.' });
+    }
+    if (username && username !== user.username && await User.findOne({ username })) {
+      return res.status(400).json({ success: false, msg: 'Username already in use.' });
+    }
+    if (phoneNumber && phoneNumber !== user.phoneNumber && await User.findOne({ phoneNumber })) {
+      return res.status(400).json({ success: false, msg: 'Phone number already in use.' });
+    }
 
-    res.status(200).json({ success: true, msg: 'User updated successfully.', user: updatedUser });
+    // Güncellenecek alanları belirle
+    if (email) updateFields.email = email;
+    if (name) updateFields.name = name;
+    if (surname) updateFields.surname = surname;
+    if (phoneNumber) updateFields.phoneNumber = phoneNumber;
+    if (username) updateFields.username = username;
+
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, { $set: updateFields }, { new: true }).select('-password -resetPasswordToken -resetPasswordExpire');
+
+    res.status(200).json({ success: true, msg: 'User updated successfully.', user: updatedUser.toObject({ getters: true }) });
   } catch (err) {
     res.status(500).json({ success: false, msg: 'Server error', error: err.message });
   }
 };
+
 
 exports.userLocationUpdate = async (req, res) => {
   const { city, location, longitude, latitude } = req.body;
