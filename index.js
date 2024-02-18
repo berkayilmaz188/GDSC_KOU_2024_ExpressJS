@@ -8,8 +8,12 @@ const categoriesRouter = require('./routes/categoriesRouter');
 const app = express();
 const path = require('path');
 const PORT = process.env.PORT || 3000;
+const cors = require('cors');
 
 const serverIP = '0.0.0.0';
+app.use(cors({
+  origin: 'http://app.welfare.ws'
+}));
 connectDB(); // MongoDB bağlantısını başlat
 
 app.use(bodyParser.json({ limit: '50mb' }));
