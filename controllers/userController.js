@@ -222,6 +222,32 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+exports.updatePassword = async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    let user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Eski şifrenin doğruluğunu kontrol et
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'The old password is incorrect.' });
+    }
+
+    // Yeni şifreyi hash'le ve güncelle
+    const hashedPassword = await bcrypt.hash(newPassword, 8);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password updated successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
 
 exports.userLocationUpdate = async (req, res) => {
   const { city, location, longitude, latitude } = req.body;

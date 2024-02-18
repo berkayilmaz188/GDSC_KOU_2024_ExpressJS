@@ -23,9 +23,21 @@ const updateUserValidation = (data) => {
   
     return schema.validate(data);
   };
+
+  const updatePasswordValidation = (data) => {
+    const schema = Joi.object({
+      oldPassword: Joi.string().min(6).required(),
+      newPassword: Joi.string().min(6).required(),
+      confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+        'any.only': 'New passwords do not match.'
+      })
+    });
+    return schema.validate(data);
+  };
   
 
 module.exports = {
     updateUserValidation,
-    userLocationUpdateValidation
+    userLocationUpdateValidation,
+    updatePasswordValidation
 };
