@@ -10,11 +10,16 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const cors = require('cors');
 
-const serverIP = '0.0.0.0';
-app.use(cors({
-  origin: 'http://app.welfare.ws'
-}));
-connectDB(); // MongoDB bağlantısını başlat
+
+app.use(
+  cors({
+    origin: ['http://app.welfare.ws'],
+    methods: ['GET,HEAD,PUT,PATCH,POST,DELETE'],
+    credentials: true,
+  })
+);
+
+connectDB(); 
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -24,7 +29,7 @@ app.use('/api/v1/user', userRouter);
 app.use('/api/v1/advert', advertRouter);
 app.use('/api/v1/categories', categoriesRouter);
 
-app.listen(PORT, serverIP, () => {
-  console.log(`${PORT} numaralı port üzerinde ${serverIP} adresinde sunucu çalışıyor.`);
+app.listen(PORT, () => {
+  console.log(`${PORT} server started.`);
 });
 
