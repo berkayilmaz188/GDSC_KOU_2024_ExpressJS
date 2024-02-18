@@ -9,7 +9,7 @@ exports.addAdvert = async (req, res) => {
   let savedAdvert;
 
   try {
-    const { title, description, category, tag, city, deadTime, point, status, visibility } = req.body;
+    const { title, description, category, tag, city, deadTime, point, status, visibility , minParticipants} = req.body;
 
     // Kategori ve etiketin geçerliliğini kontrol et
     const isValidCategoryAndTag = await validateCategoryAndTag(category, tag);
@@ -32,6 +32,7 @@ exports.addAdvert = async (req, res) => {
       point,
       status,
       visibility,
+      minParticipants,
       images: []
     });
 

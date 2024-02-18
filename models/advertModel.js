@@ -13,6 +13,9 @@ const advertSchema = new mongoose.Schema({
   status: { type: String, default: 'active' }, // 'active', 'inactive' gibi durumlar olabilir
   visibility: { type: String, default: 'public' }, // 'public' veya 'private'
   images: [String], // Resimlerin URL'lerini saklayacak
+  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  minParticipants: { type: Number, required: true }, // Minimum katılımcı sayısı
+  drawCompleted: { type: Boolean, default: false } 
 });
 
 module.exports = mongoose.model('Advert', advertSchema);
