@@ -10,7 +10,7 @@ const sendActivationEmail = async (email, token) => {
     },
   });
 
-  const activationUrl = `http://87.248.157.166:3000/api/v1/auth/activate/${token}`; // Frontend aktivasyon URL'nizi ve endpoint'inizi buraya girin
+  const activationUrl = `http://app.welfare.ws/api/v1/auth/activate/${token}`; // Frontend aktivasyon URL'nizi ve endpoint'inizi buraya girin
 
   const mailOptions = {
     from: process.env.EMAIL_ADDRESS, // Gönderici adresi

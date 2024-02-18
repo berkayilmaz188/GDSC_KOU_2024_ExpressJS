@@ -103,7 +103,7 @@ exports.forgotPassword = async (req, res) => {
 
   await user.save();
 
-  const resetUrl = `http://87.248.157.166:3000/api/v1/auth/reset-password/${resetToken}`;
+  const resetUrl = `http://app.welfare.ws/api/v1/auth/reset-password/${resetToken}`;
 
   try {
     await sendPasswordResetEmail(user.email, resetUrl);
