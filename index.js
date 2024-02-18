@@ -13,11 +13,19 @@ const cors = require('cors');
 
 app.use(
   cors({
-    origin: ['http://app.welfare.ws'],
-    methods: ['GET,HEAD,PUT,PATCH,POST,DELETE'],
+    origin: function (origin, callback) {
+      // Tüm localhost portlarına izin ver veya spesifik bir domain
+      if (!origin || origin.includes('localhost') || origin.includes('http://app.welfare.ws')) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS policy violation'), false);
+      }
+    },
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
     credentials: true,
   })
 );
+
 
 connectDB(); 
 
