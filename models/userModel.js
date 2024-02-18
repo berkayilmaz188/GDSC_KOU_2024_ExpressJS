@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default:false , required: true },
   actionsHistory: [actionSchema],
   participatedAdverts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Advert' }],
+  lostAdverts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Advert' }],
   wonAdverts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Advert' }],
   points: { type: Number, required: true, default: 200 },
   resetPasswordToken: String, // Şifre sıfırlama token'ı için alan

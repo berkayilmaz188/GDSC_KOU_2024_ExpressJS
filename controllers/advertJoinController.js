@@ -63,21 +63,27 @@ exports.joinAdvert = async (req, res) => {
     // Kazananı ve ilanı güncelle
     const winner = await User.findById(winnerId);
     winner.wonAdverts.push(advertId);
+    advert.winner = winnerId; // Kazananı ilanın winner alanına kaydet
+    advert.drawCompleted = true;
+    advert.status = 'completed';
     await winner.save();
+    await advert.save();
 
     // İlanın durumunu ve çekiliş tamamlanma durumunu güncelle
     advert.drawCompleted = true;
     advert.status = 'completed'; // İlanın durumunu 'completed' olarak güncelle
+    advert.lostParticipants = advert.participants.filter(participantId => participantId.toString() !== winnerId.toString());
     await advert.save();
   
-    // Diğer katılımcılara puan iadesi
+    // Diğer katılımcılara puan iadesi ve kaybeden ilanların güncellenmesi
     advert.participants.forEach(async participantId => {
-      if (participantId.toString() !== winnerId.toString()) {
-        const participant = await User.findById(participantId);
-        participant.points += advert.point;
-        await participant.save();
-      }
-    });
+        if (participantId.toString() !== winnerId.toString()) {
+          const participant = await User.findById(participantId);
+          participant.points += advert.point; // Puan iadesi
+          participant.lostAdverts.push(advertId); // Kaybedilen ilanlar listesine ekle
+          await participant.save();
+        }
+      });
 
     // İlan sahibine puan ekleme
     const owner = await User.findById(req.user.id);
@@ -129,6 +135,59 @@ exports.withdrawFromAdvert = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
 };
+
+
+exports.getAdvertDetails = async (req, res) => {
+    const { advertId } = req.params;
+
+    try {
+        const advert = await Advert.findById(advertId)
+                                  .populate('owner', 'username')
+                                  .populate('participants', 'username')
+                                  .populate('lostParticipants', 'username') // Kaybeden katılımcıları da getir
+                                  .populate('winner', 'username');
+        if (!advert) {
+            return res.status(404).json({ success: false, message: "Advert not found." });
+        }
+
+        // İlan sahibi kontrolü
+        if (advert.owner._id.toString() !== req.user.id.toString()) {
+            return res.status(403).json({ success: false, message: "You are not the owner of this advert." });
+        }
+
+        const participantCount = advert.participants.length; // Katılımcı sayısını hesapla
+
+        // İlanın durumu "completed" ise kaybeden katılımcıların listesini de döndür
+        let lostParticipantsList = [];
+        let winnerUsername = null;
+        if (advert.status === 'completed') {
+            lostParticipantsList = advert.lostParticipants.map(participant => participant.username);
+            winnerUsername = advert.winner.username; 
+        }
+
+        // İlan detayları ve katılımcı sayısını döndür
+        res.status(200).json({
+            success: true,
+            advertDetails: {
+                title: advert.title,
+                description: advert.description,
+                category: advert.category,
+                tag: advert.tag,
+                city: advert.city,
+                status: advert.status,
+                drawCompleted: advert.drawCompleted,
+                participantCount: participantCount,
+                participants: advert.participants.map(participant => participant.username), // Katılımcı kullanıcı adlarını listele
+                lostParticipants: lostParticipantsList,
+                winner: winnerUsername // Kaybeden katılımcıları listele, durum "completed" ise
+            }
+        });
+    } catch (error) {
+        console.error("Error retrieving advert details:", error);
+        res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
+
 
 
 
