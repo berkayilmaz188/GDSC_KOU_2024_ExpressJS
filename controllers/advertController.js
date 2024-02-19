@@ -4,7 +4,8 @@ const Advert = require('../models/advertModel'); // Modelin yolu projenize göre
 const photosDir = path.join(__dirname, '../photos');
 const sharp = require('sharp');
 const validateCategoryAndTag = require('../validaton/categoriesValidation');
-
+const Categories = require('../models/categoriesModel');
+const User = require('../models/userModel');
 exports.addAdvert = async (req, res) => {
   let savedAdvert;
 
@@ -92,6 +93,43 @@ exports.addAdvert = async (req, res) => {
     res.status(500).json({ message: "İlan eklenirken bir hata oluştu.", error: error.message });
   }
 };
+
+exports.updateAdvert = async (req, res) => {
+  const { id } = req.params;
+  const { category, tag, point, minParticipants, ...otherFields } = req.body;
+  let updateFields = {};
+
+  // Sadece dolu olan alanları güncelleme nesnesine ekle
+  Object.keys(otherFields).forEach(key => {
+    if (otherFields[key]) updateFields[key] = otherFields[key];
+  });
+
+  // Kategori, etiket, puan ve minimum katılımcı sayısının kontrolü
+  const isValid = await validateCategoryTagPointAndMinParticipants(category, tag, point, minParticipants);
+  if (!isValid) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid category, tag, point, or minParticipants. Please check your data."
+    });
+  }
+
+  try {
+    const advert = await Advert.findByIdAndUpdate(id, { $set: updateFields }, { new: true });
+    res.status(200).json({ success: true, advert });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error updating the advert", error: error.message });
+  }
+};
+
+async function validateCategoryTagPointAndMinParticipants(category, tag, point, minParticipants) {
+  if (!category || !tag) return true; // Kategori ve etiket kontrolü isteğe bağlıdır
+  // String olarak gelen point ve minParticipants değerlerini Number tipine dönüştür
+  const numericPoint = Number(point);
+  const numericMinParticipants = Number(minParticipants);
+
+  const categoryData = await Categories.findOne({ category, tag });
+  return categoryData && categoryData.point === numericPoint && categoryData.minParticipants === numericMinParticipants;
+}
 
 
 exports.getAdvert = async (req, res) => {
@@ -299,4 +337,71 @@ exports.viewPublicAdvert = async (req, res) => {
       res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+exports.getUserAdvertDetails = async (req, res) => {
+  const { type } = req.params; // URL'den eylem tipini al (lostAdverts, wonAdverts, participatedAdverts)
+  const userId = req.user.id; // Auth middleware'inden gelen kullanıcı ID'si
+
+  try {
+      const user = await User.findById(userId).populate({
+          path: type, // Dinamik olarak populate edilecek yol (lostAdverts, wonAdverts, participatedAdverts)
+          select: 'title description category tag city status visibility images' // İlan detaylarını seç
+      });
+
+      if (!user) {
+          return res.status(404).json({ success: false, message: "User not found." });
+      }
+
+      // Belirtilen tipdeki ilanlar yoksa veya boşsa
+      if (!user[type] || user[type].length === 0) {
+          return res.status(404).json({ success: false, message: `No adverts found for ${type}.` });
+      }
+
+      // İlanların detaylarını döndür
+      res.status(200).json({
+          success: true,
+          adverts: user[type] // Dinamik olarak ilanların detaylarını döndür
+      });
+  } catch (error) {
+      console.error(`Error retrieving ${type} adverts details:`, error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.getUserActionsHistory = async (req, res) => {
+  const userId = req.user.id; // Auth middleware'inden gelen kullanıcı ID'si
+  const limit = parseInt(req.params.limit); // URL'den limit parametresini al
+
+  try {
+    const user = await User.findById(userId, 'actionsHistory')
+      .populate({
+        path: 'actionsHistory.advertId',
+        select: 'title description category tag city status visibility images' // İlan detaylarını seç
+      })
+      .exec();
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    // Kullanıcının eylem geçmişinden istenen sayıda son kaydı seç
+    const actionsWithDetails = user.actionsHistory.slice(-limit).map(action => {
+      return {
+        type: action.type,
+        advertId: action.advertId, // advertDetails yerine doğrudan burada advertId detaylarını ver
+        timestamp: action.timestamp
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      actionsHistory: actionsWithDetails
+    });
+  } catch (error) {
+    console.error("Error retrieving actions history details:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+
 
