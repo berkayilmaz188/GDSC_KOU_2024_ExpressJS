@@ -2,18 +2,31 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/userModel');
-const { sendActivationEmail , sendPasswordResetEmail } = require('../helpers/mailer');
+const { sendActivationEmail, sendPasswordResetEmail } = require('../helpers/mailer');
 
 
 
 exports.register = async (req, res) => {
   try {
-    const { email, password, username, name, surname, phoneNumber, city, location, longitude, latitude } = req.body;
+    const { email, password, username, phoneNumber, city, location, longitude, latitude, nameUnited } = req.body;
+    
+     // nameUnited doluysa, bu alanı kullanarak name ve surname'i ayır
+     let name = '', surname = '';
+     if (nameUnited) {
+       const parts = nameUnited.split(' ');
+       name = parts[0]; // Boşluktan önceki kısım name olarak alınır
+       surname = parts.slice(1).join(' '); // Boşluktan sonraki tüm kısımlar surname olarak birleştirilir
+     } else {
+       // nameUnited boş ise direkt body'den name ve surname alınır
+       name = req.body.name;
+       surname = req.body.surname;
+     }
 
     let user = await User.findOne({ $or: [{ email }, { username }, { phoneNumber }] });
     if (user) {
       return res.status(400).json({ success: false, msg: 'The email, username or phone number is already in use.' });
     }
+
 
     const hashedPassword = await bcrypt.hash(password, 8);
 

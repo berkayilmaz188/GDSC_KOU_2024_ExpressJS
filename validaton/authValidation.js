@@ -12,7 +12,8 @@ const registerValidation = (data) => {
         city: Joi.string().required(),
         location: Joi.string().required(),
         longitude: Joi.string().required(),
-        latitude: Joi.string().required()
+        latitude: Joi.string().required(),
+        nameUnited: Joi.string().min(1).allow(null, '')
     });
     return schema.validate(data);
 };

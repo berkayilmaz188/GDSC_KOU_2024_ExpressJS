@@ -15,7 +15,8 @@ const advertSchema = new mongoose.Schema({
   images: [String], // Resimlerin URL'lerini saklayacak
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   lostParticipants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
-  winner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false }, // Kazanan kullanıcının ID'si
+  winnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+  winnerUsername: { type: String, required: false }, // Kazanan kullanıcının ID'si
   minParticipants: { type: Number, required: true }, // Minimum katılımcı sayısı
   drawCompleted: { type: Boolean, default: false } 
 });

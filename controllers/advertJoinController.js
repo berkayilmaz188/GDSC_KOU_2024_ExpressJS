@@ -9,6 +9,10 @@ exports.joinAdvert = async (req, res) => {
     if (!advert) {
       return res.status(404).json({ success: false, message: "Advert not found." });
     }
+
+    if (advert.status !== 'active') {
+        return res.status(403).json({ success: false, message: "This advert is not active." });
+      }
   
     const user = await User.findById(userId);
     if (user.points < advert.point) {
@@ -63,7 +67,9 @@ exports.joinAdvert = async (req, res) => {
     // Kazananı ve ilanı güncelle
     const winner = await User.findById(winnerId);
     winner.wonAdverts.push(advertId);
-    advert.winner = winnerId; // Kazananı ilanın winner alanına kaydet
+
+    advert.winnerId = winnerId;
+    advert.winnerUsername = winner.username; // Kazananı ilanın winner alanına kaydet
     advert.drawCompleted = true;
     advert.status = 'completed';
     await winner.save();
@@ -145,7 +151,7 @@ exports.getAdvertDetails = async (req, res) => {
                                   .populate('owner', 'username')
                                   .populate('participants', 'username')
                                   .populate('lostParticipants', 'username') // Kaybeden katılımcıları da getir
-                                  .populate('winner', 'username');
+                                  .populate('winnerId', 'username');
         if (!advert) {
             return res.status(404).json({ success: false, message: "Advert not found." });
         }
@@ -162,7 +168,7 @@ exports.getAdvertDetails = async (req, res) => {
         let winnerUsername = null;
         if (advert.status === 'completed') {
             lostParticipantsList = advert.lostParticipants.map(participant => participant.username);
-            winnerUsername = advert.winner.username; 
+            winnerUsername = advert.winnerId.username; 
         }
 
         // İlan detayları ve katılımcı sayısını döndür
@@ -179,7 +185,8 @@ exports.getAdvertDetails = async (req, res) => {
                 participantCount: participantCount,
                 participants: advert.participants.map(participant => participant.username), // Katılımcı kullanıcı adlarını listele
                 lostParticipants: lostParticipantsList,
-                winner: winnerUsername // Kaybeden katılımcıları listele, durum "completed" ise
+                winner: advert.winnerId ? advert.winnerId.username : null, 
+                images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`), // Resimlerin tam URL'lerini döndür
             }
         });
     } catch (error) {

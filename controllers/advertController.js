@@ -258,5 +258,45 @@ exports.getFilteredAdverts = async (req, res) => {
   }
 };
 
+exports.viewPublicAdvert = async (req, res) => {
+  const { advertId } = req.params; // Path'dan alınan ilan ID'si
 
+  try {
+      const advert = await Advert.findById(advertId)
+                                 .populate('owner', 'username email') // İlan sahibinin bazı bilgilerini getir
+                                 .populate('participants', 'username'); // Katılımcı bilgilerini getir
+
+      if (!advert) {
+          return res.status(404).json({ success: false, message: "Advert not found." });
+      }
+
+      // Eğer ilan public değilse veya status 'active' değilse ve kullanıcı ilan sahibi değilse, erişimi reddet
+      if ((advert.visibility !== 'public' || advert.status !== 'active') && advert.owner._id.toString() !== req.user.id.toString()) {
+          return res.status(403).json({ success: false, message: "Access denied." });
+      }
+
+      const participantCount = advert.participants.length;
+
+      // İlan detaylarını döndür
+      res.status(200).json({
+          success: true,
+          advert: {
+              title: advert.title,
+              description: advert.description,
+              category: advert.category,
+              tag: advert.tag,
+              city: advert.city,
+              status: advert.status,
+              visibility: advert.visibility,
+              participantCount: participantCount,
+              images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`) // Resimlerin tam URL'lerini döndür
+              //participants: advert.participants
+              // Katılımcı bilgileri
+          }
+      });
+  } catch (error) {
+      console.error("Error viewing public advert:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
 
