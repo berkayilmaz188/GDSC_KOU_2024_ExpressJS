@@ -307,10 +307,10 @@ exports.viewPublicAdvert = async (req, res) => {
 
   try {
     const advert = await Advert.findById(advertId)
-    .populate({
-      path: 'owner',
-      select: 'username' // Sadece username alanını getir
-    })// İlan sahibinin bazı bilgilerini getir
+      .populate({
+        path: 'owner',
+        select: 'username' // Sadece username alanını getir
+      })// İlan sahibinin bazı bilgilerini getir
       .populate('participants', 'username'); // Katılımcı bilgilerini getir
 
     if (!advert) {
@@ -359,58 +359,58 @@ exports.getPrivateAdvertDetails = async (req, res) => {
   const { advertId } = req.params;
 
   try {
-      const advert = await Advert.findById(advertId)
-                                .populate('owner', 'username')
-                                .populate('participants', 'username')
-                                .populate('lostParticipants', 'username') // Kaybeden katılımcıları da getir
-                                .populate('winnerId', 'username');
-      if (!advert) {
-          return res.status(404).json({ success: false, message: "Advert not found." });
+    const advert = await Advert.findById(advertId)
+      .populate('owner', 'username')
+      .populate('participants', 'username')
+      .populate('lostParticipants', 'username') // Kaybeden katılımcıları da getir
+      .populate('winnerId', 'username');
+    if (!advert) {
+      return res.status(404).json({ success: false, message: "Advert not found." });
+    }
+
+    // İlan sahibi kontrolü
+    if (advert.owner._id.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: "You are not the owner of this advert." });
+    }
+
+    const participantCount = advert.participants.length; // Katılımcı sayısını hesapla
+
+    // İlanın durumu "completed" ise kaybeden katılımcıların listesini de döndür
+    let lostParticipantsList = [];
+    let winnerUsername = null;
+    if (advert.status === 'completed') {
+      lostParticipantsList = advert.lostParticipants.map(participant => participant.username);
+      winnerUsername = advert.winnerId.username;
+    }
+
+    // İlan detayları ve katılımcı sayısını döndür
+    res.status(200).json({
+      success: true,
+      advertDetails: {
+        _id: advert._id,
+        title: advert.title,
+        description: advert.description,
+        category: advert.category,
+        tag: advert.tag,
+        city: advert.city,
+        location: advert.location,
+        latitude: advert.latitude,
+        longitude: advert.longitude,
+        status: advert.status,
+        point: advert.point,
+        visibility: advert.visibility,
+        drawCompleted: advert.drawCompleted,
+        minParticipants: advert.minParticipants,
+        participantCount: participantCount,
+        participants: advert.participants.map(participant => participant.username), // Katılımcı kullanıcı adlarını listele
+        lostParticipants: lostParticipantsList,
+        winner: advert.winnerId ? advert.winnerId.username : null,
+        images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`), // Resimlerin tam URL'lerini döndür
       }
-
-      // İlan sahibi kontrolü
-      if (advert.owner._id.toString() !== req.user.id.toString()) {
-          return res.status(403).json({ success: false, message: "You are not the owner of this advert." });
-      }
-
-      const participantCount = advert.participants.length; // Katılımcı sayısını hesapla
-
-      // İlanın durumu "completed" ise kaybeden katılımcıların listesini de döndür
-      let lostParticipantsList = [];
-      let winnerUsername = null;
-      if (advert.status === 'completed') {
-          lostParticipantsList = advert.lostParticipants.map(participant => participant.username);
-          winnerUsername = advert.winnerId.username; 
-      }
-
-      // İlan detayları ve katılımcı sayısını döndür
-      res.status(200).json({
-          success: true,
-          advertDetails: {
-              _id: advert._id,
-              title: advert.title,
-              description: advert.description,
-              category: advert.category,
-              tag: advert.tag,
-              city: advert.city,
-              location: advert.location,
-              latitude: advert.latitude,
-              longitude: advert.longitude,
-              status: advert.status,
-              point: advert.point,
-              visibility: advert.visibility,
-              drawCompleted: advert.drawCompleted,
-              minParticipants: advert.minParticipants,
-              participantCount: participantCount,
-              participants: advert.participants.map(participant => participant.username), // Katılımcı kullanıcı adlarını listele
-              lostParticipants: lostParticipantsList,
-              winner: advert.winnerId ? advert.winnerId.username : null, 
-              images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`), // Resimlerin tam URL'lerini döndür
-          }
-      });
+    });
   } catch (error) {
-      console.error("Error retrieving advert details:", error);
-      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error("Error retrieving advert details:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -511,13 +511,16 @@ exports.addFavoriteAdvert = async (req, res) => {
 
 exports.getFavoriteAdverts = async (req, res) => {
   const userId = req.user.id; // Kullanıcı ID'si
-  const limit = parseInt(req.query.limit) || 5; // Query'den gelen limit parametresi
+  let limit = req.query.limit ? parseInt(req.query.limit) : null;
 
   try {
     const user = await User.findById(userId)
       .populate({
         path: 'favoriteAdverts',
-        options: { limit: limit } // Limit uygula
+        populate: {
+          path: 'owner',
+          select: 'username' // İlan sahibinin kullanıcı adını dahil etmek için populate kullanılır
+        }
       });
 
     if (!user) {
@@ -540,12 +543,17 @@ exports.getFavoriteAdverts = async (req, res) => {
       visibility: advert.visibility,
       point: advert.point,
       minParticipants: advert.minParticipants,
-      winner: advert.winnerId ? advert.winnerId.username : null, 
+      winner: advert.winnerId ? advert.winnerId.username : null,
       drawCompleted: advert.drawCompleted,
       createdAt: advert.createdAt,
       updatedAt: advert.updatedAt,
       images: advert.images,
     }));
+
+    // Eğer limit varsa, belirtilen sayıda favori ilanı döndür
+    if (limit) {
+      favoriteAdvertsDetails = favoriteAdvertsDetails.slice(0, limit);
+    }
 
     res.status(200).json({ success: true, favoriteAdverts: favoriteAdvertsDetails });
   } catch (error) {

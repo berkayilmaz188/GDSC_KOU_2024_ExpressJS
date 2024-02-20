@@ -31,7 +31,7 @@ router.get('/advertStatus/:type', auth, getUserAdvertDetails);
 router.get('/actionsHistory/:limit', auth, getUserActionsHistory);
 
 router.post('/favoriteAdverts/:advertId', auth, addFavoriteAdvert);
-router.get('/favoriteAdverts', auth, getFavoriteAdverts);
+router.get('/favoriteAdverts/:limit', auth, getFavoriteAdverts);
 router.delete('/favoriteAdverts/:advertId', auth, removeFavoriteAdvert);
 
 
