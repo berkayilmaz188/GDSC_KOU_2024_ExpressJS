@@ -18,7 +18,11 @@ const advertSchema = new mongoose.Schema({
   winnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   winnerUsername: { type: String, required: false }, // Kazanan kullanıcının ID'si
   minParticipants: { type: Number, required: true }, // Minimum katılımcı sayısı
-  drawCompleted: { type: Boolean, default: false } 
+  drawCompleted: { type: Boolean, default: false } ,
+  city: { type: String, required: true }, // Şehir bilgisi
+  location: { type: String, required: false }, // Konum açıklaması
+  latitude: { type: String, required: false }, // Enlem bilgisi
+  longitude: { type: String, required: false }, // Boylam bilgisi
 });
 
 module.exports = mongoose.model('Advert', advertSchema);

@@ -25,7 +25,6 @@ const userSchema = new mongoose.Schema({
   points: { type: Number, required: true, default: 200 },
   resetPasswordToken: String, // Şifre sıfırlama token'ı için alan
   resetPasswordExpire: Date // Token'ın geçerlilik süresi için alan
-  
 });
 
 module.exports = mongoose.model('User', userSchema);

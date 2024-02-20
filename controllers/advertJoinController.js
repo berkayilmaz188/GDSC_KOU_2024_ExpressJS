@@ -143,57 +143,7 @@ exports.withdrawFromAdvert = async (req, res) => {
 };
 
 
-exports.getAdvertDetails = async (req, res) => {
-    const { advertId } = req.params;
 
-    try {
-        const advert = await Advert.findById(advertId)
-                                  .populate('owner', 'username')
-                                  .populate('participants', 'username')
-                                  .populate('lostParticipants', 'username') // Kaybeden katılımcıları da getir
-                                  .populate('winnerId', 'username');
-        if (!advert) {
-            return res.status(404).json({ success: false, message: "Advert not found." });
-        }
-
-        // İlan sahibi kontrolü
-        if (advert.owner._id.toString() !== req.user.id.toString()) {
-            return res.status(403).json({ success: false, message: "You are not the owner of this advert." });
-        }
-
-        const participantCount = advert.participants.length; // Katılımcı sayısını hesapla
-
-        // İlanın durumu "completed" ise kaybeden katılımcıların listesini de döndür
-        let lostParticipantsList = [];
-        let winnerUsername = null;
-        if (advert.status === 'completed') {
-            lostParticipantsList = advert.lostParticipants.map(participant => participant.username);
-            winnerUsername = advert.winnerId.username; 
-        }
-
-        // İlan detayları ve katılımcı sayısını döndür
-        res.status(200).json({
-            success: true,
-            advertDetails: {
-                title: advert.title,
-                description: advert.description,
-                category: advert.category,
-                tag: advert.tag,
-                city: advert.city,
-                status: advert.status,
-                drawCompleted: advert.drawCompleted,
-                participantCount: participantCount,
-                participants: advert.participants.map(participant => participant.username), // Katılımcı kullanıcı adlarını listele
-                lostParticipants: lostParticipantsList,
-                winner: advert.winnerId ? advert.winnerId.username : null, 
-                images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`), // Resimlerin tam URL'lerini döndür
-            }
-        });
-    } catch (error) {
-        console.error("Error retrieving advert details:", error);
-        res.status(500).json({ success: false, message: "Server error", error: error.message });
-    }
-};
 
 
 

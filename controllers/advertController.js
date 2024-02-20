@@ -6,11 +6,14 @@ const sharp = require('sharp');
 const validateCategoryAndTag = require('../validaton/categoriesValidation');
 const Categories = require('../models/categoriesModel');
 const User = require('../models/userModel');
+
 exports.addAdvert = async (req, res) => {
   let savedAdvert;
 
   try {
-    const { title, description, category, tag, city, deadTime, point, status, visibility , minParticipants} = req.body;
+    const { title, description, category, tag, city, deadTime, point, status, visibility, minParticipants } = req.body;
+
+    const user = await User.findById(req.user.id);
 
     // Kategori ve etiketin geçerliliğini kontrol et
     const isValidCategoryAndTag = await validateCategoryAndTag(category, tag);
@@ -27,7 +30,10 @@ exports.addAdvert = async (req, res) => {
       description,
       category,
       tag,
-      city,
+      city: user.city, // Kullanıcıdan alınan şehir bilgisi
+      location: user.location, // Kullanıcıdan alınan konum açıklaması
+      latitude: user.latitude, // Kullanıcıdan alınan enlem bilgisi
+      longitude: user.longitude, // Kullanıcıdan alınan boylam bilgisi
       createTime: Date.now(),
       deadTime,
       point,
@@ -300,40 +306,106 @@ exports.viewPublicAdvert = async (req, res) => {
   const { advertId } = req.params; // Path'dan alınan ilan ID'si
 
   try {
-      const advert = await Advert.findById(advertId)
-                                 .populate('owner', 'username email') // İlan sahibinin bazı bilgilerini getir
-                                 .populate('participants', 'username'); // Katılımcı bilgilerini getir
+    const advert = await Advert.findById(advertId)
+      .populate('owner', 'username email') // İlan sahibinin bazı bilgilerini getir
+      .populate('participants', 'username'); // Katılımcı bilgilerini getir
 
+    if (!advert) {
+      return res.status(404).json({ success: false, message: "Advert not found." });
+    }
+
+    // Eğer ilan public değilse veya status 'active' değilse ve kullanıcı ilan sahibi değilse, erişimi reddet
+    if ((advert.visibility !== 'public' || advert.status !== 'active') && advert.owner._id.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: "Access denied." });
+    }
+
+    const participantCount = advert.participants.length;
+
+    // İlan detaylarını döndür
+    res.status(200).json({
+      success: true,
+      advert: {
+        _id: advert._id,
+        title: advert.title,
+        description: advert.description,
+        category: advert.category,
+        tag: advert.tag,
+        city: advert.city,
+        location: advert.location,
+        latitude: advert.latitude,
+        longitude: advert.longitude,
+        status: advert.status,
+        point: advert.point,
+        visibility: advert.visibility,
+        drawCompleted: advert.drawCompleted,
+        minParticipants: advert.minParticipants,
+        participantCount: participantCount,
+        images: advert.images.map(image => `${image}`) // Resimlerin tam URL'lerini döndür
+        //participants: advert.participants
+        // Katılımcı bilgileri
+      }
+    });
+  } catch (error) {
+    console.error("Error viewing public advert:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.getPrivateAdvertDetails = async (req, res) => {
+  const { advertId } = req.params;
+
+  try {
+      const advert = await Advert.findById(advertId)
+                                .populate('owner', 'username')
+                                .populate('participants', 'username')
+                                .populate('lostParticipants', 'username') // Kaybeden katılımcıları da getir
+                                .populate('winnerId', 'username');
       if (!advert) {
           return res.status(404).json({ success: false, message: "Advert not found." });
       }
 
-      // Eğer ilan public değilse veya status 'active' değilse ve kullanıcı ilan sahibi değilse, erişimi reddet
-      if ((advert.visibility !== 'public' || advert.status !== 'active') && advert.owner._id.toString() !== req.user.id.toString()) {
-          return res.status(403).json({ success: false, message: "Access denied." });
+      // İlan sahibi kontrolü
+      if (advert.owner._id.toString() !== req.user.id.toString()) {
+          return res.status(403).json({ success: false, message: "You are not the owner of this advert." });
       }
 
-      const participantCount = advert.participants.length;
+      const participantCount = advert.participants.length; // Katılımcı sayısını hesapla
 
-      // İlan detaylarını döndür
+      // İlanın durumu "completed" ise kaybeden katılımcıların listesini de döndür
+      let lostParticipantsList = [];
+      let winnerUsername = null;
+      if (advert.status === 'completed') {
+          lostParticipantsList = advert.lostParticipants.map(participant => participant.username);
+          winnerUsername = advert.winnerId.username; 
+      }
+
+      // İlan detayları ve katılımcı sayısını döndür
       res.status(200).json({
           success: true,
-          advert: {
+          advertDetails: {
+              _id: advert._id,
               title: advert.title,
               description: advert.description,
               category: advert.category,
               tag: advert.tag,
               city: advert.city,
+              location: advert.location,
+              latitude: advert.latitude,
+              longitude: advert.longitude,
               status: advert.status,
+              point: advert.point,
               visibility: advert.visibility,
+              drawCompleted: advert.drawCompleted,
+              minParticipants: advert.minParticipants,
               participantCount: participantCount,
-              images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`) // Resimlerin tam URL'lerini döndür
-              //participants: advert.participants
-              // Katılımcı bilgileri
+              participants: advert.participants.map(participant => participant.username), // Katılımcı kullanıcı adlarını listele
+              lostParticipants: lostParticipantsList,
+              winner: advert.winnerId ? advert.winnerId.username : null, 
+              images: advert.images.map(image => `${req.protocol}://${req.get('host')}/photos/${image}`), // Resimlerin tam URL'lerini döndür
           }
       });
   } catch (error) {
-      console.error("Error viewing public advert:", error);
+      console.error("Error retrieving advert details:", error);
       res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
@@ -343,28 +415,28 @@ exports.getUserAdvertDetails = async (req, res) => {
   const userId = req.user.id; // Auth middleware'inden gelen kullanıcı ID'si
 
   try {
-      const user = await User.findById(userId).populate({
-          path: type, // Dinamik olarak populate edilecek yol (lostAdverts, wonAdverts, participatedAdverts)
-          select: 'title description category tag city status visibility images' // İlan detaylarını seç
-      });
+    const user = await User.findById(userId).populate({
+      path: type, // Dinamik olarak populate edilecek yol (lostAdverts, wonAdverts, participatedAdverts)
+      select: 'title description category tag city status visibility images' // İlan detaylarını seç
+    });
 
-      if (!user) {
-          return res.status(404).json({ success: false, message: "User not found." });
-      }
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
 
-      // Belirtilen tipdeki ilanlar yoksa veya boşsa
-      if (!user[type] || user[type].length === 0) {
-          return res.status(404).json({ success: false, message: `No adverts found for ${type}.` });
-      }
+    // Belirtilen tipdeki ilanlar yoksa veya boşsa
+    if (!user[type] || user[type].length === 0) {
+      return res.status(404).json({ success: false, message: `No adverts found for ${type}.` });
+    }
 
-      // İlanların detaylarını döndür
-      res.status(200).json({
-          success: true,
-          adverts: user[type] // Dinamik olarak ilanların detaylarını döndür
-      });
+    // İlanların detaylarını döndür
+    res.status(200).json({
+      success: true,
+      adverts: user[type] // Dinamik olarak ilanların detaylarını döndür
+    });
   } catch (error) {
-      console.error(`Error retrieving ${type} adverts details:`, error);
-      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error(`Error retrieving ${type} adverts details:`, error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 

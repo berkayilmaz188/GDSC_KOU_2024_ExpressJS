@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { upload } = require('../middlewares/uploadMiddleware'); // Doğru yolu kullanın
-const { addAdvert, deleteAdvert, getAdvert, getAllPublicAdverts, getPublicAdvertsByCity, getFilteredAdverts, viewPublicAdvert, updateAdvert, getUserAdvertDetails, getUserActionsHistory } = require('../controllers/advertController');
+const { addAdvert, deleteAdvert, getAdvert, getAllPublicAdverts, getPublicAdvertsByCity, getFilteredAdverts, viewPublicAdvert, updateAdvert, getUserAdvertDetails, getUserActionsHistory, getPrivateAdvertDetails } = require('../controllers/advertController');
 const auth = require('../middlewares/authMiddleware');
 const { joinAdvert, performDraw, withdrawFromAdvert, getAdvertDetails } = require('../controllers/advertJoinController');
 const validateRequest = require('../middlewares/validateRequest');
@@ -23,9 +23,11 @@ router.post('/performDraw/:advertId', auth, performDraw);
 router.delete('/withdraw/:advertId', auth, withdrawFromAdvert);
 
 
-router.get('/advertDetails/:advertId', auth, getAdvertDetails);
+router.get('/advertDetails/:advertId', auth, getPrivateAdvertDetails);
+router.get('/viewPublicAdvert/:advertId', auth, viewPublicAdvert);
+
 router.get('/advertStatus/:type', auth, getUserAdvertDetails);
 router.get('/actionsHistory/:limit', auth, getUserActionsHistory);
-router.get('/viewPublicAdvert/:advertId', auth, viewPublicAdvert);
+
 
 module.exports = router;
