@@ -421,7 +421,7 @@ exports.getUserAdvertDetails = async (req, res) => {
   try {
     const user = await User.findById(userId).populate({
       path: type, // Dinamik olarak populate edilecek yol (lostAdverts, wonAdverts, participatedAdverts)
-      select: 'title description category tag city status visibility images' // İlan detaylarını seç
+      // select kullanmıyoruz çünkü tüm alanları döndürmek istiyoruz
     });
 
     if (!user) {
@@ -433,16 +433,17 @@ exports.getUserAdvertDetails = async (req, res) => {
       return res.status(404).json({ success: false, message: `No adverts found for ${type}.` });
     }
 
-    // İlanların detaylarını döndür
+    // İlanların tüm detaylarını döndür
     res.status(200).json({
       success: true,
-      adverts: user[type] // Dinamik olarak ilanların detaylarını döndür
+      adverts: user[type] // Dinamik olarak ilanların tüm detaylarını döndür
     });
   } catch (error) {
     console.error(`Error retrieving ${type} adverts details:`, error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
 
 exports.getUserActionsHistory = async (req, res) => {
   const userId = req.user.id; // Auth middleware'inden gelen kullanıcı ID'si
@@ -479,5 +480,104 @@ exports.getUserActionsHistory = async (req, res) => {
   }
 };
 
+exports.addFavoriteAdvert = async (req, res) => {
+  const { advertId } = req.params; // URL'den ilan ID'si alınır
+  const userId = req.user.id; // Kullanıcı ID'si, genellikle middleware aracılığıyla alınır
+
+  try {
+    // Kullanıcıyı ve ilanı bul
+    const user = await User.findById(userId);
+    const advert = await Advert.findById(advertId);
+
+    if (!advert) {
+      return res.status(404).json({ success: false, message: "Advert not found." });
+    }
+
+    // İlan zaten favorilerde mi diye kontrol et
+    if (user.favoriteAdverts.includes(advertId)) {
+      return res.status(400).json({ success: false, message: "Advert is already in favorites." });
+    }
+
+    // Favorilere ilanı ekle ve kaydet
+    user.favoriteAdverts.push(advertId);
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Advert added to favorites." });
+  } catch (error) {
+    console.error("Error adding favorite advert:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.getFavoriteAdverts = async (req, res) => {
+  const userId = req.user.id; // Kullanıcı ID'si
+  const limit = parseInt(req.query.limit) || 5; // Query'den gelen limit parametresi
+
+  try {
+    const user = await User.findById(userId)
+      .populate({
+        path: 'favoriteAdverts',
+        options: { limit: limit } // Limit uygula
+      });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    // İlanların tam detaylarını döndür
+    const favoriteAdvertsDetails = user.favoriteAdverts.map(advert => ({
+      _id: advert._id,
+      owner: advert.owner,
+      title: advert.title,
+      description: advert.description,
+      category: advert.category,
+      tag: advert.tag,
+      city: advert.city,
+      location: advert.location,
+      latitude: advert.latitude,
+      longitude: advert.longitude,
+      status: advert.status,
+      visibility: advert.visibility,
+      point: advert.point,
+      minParticipants: advert.minParticipants,
+      winner: advert.winnerId ? advert.winnerId.username : null, 
+      drawCompleted: advert.drawCompleted,
+      createdAt: advert.createdAt,
+      updatedAt: advert.updatedAt,
+      images: advert.images,
+    }));
+
+    res.status(200).json({ success: true, favoriteAdverts: favoriteAdvertsDetails });
+  } catch (error) {
+    console.error("Error retrieving favorite adverts:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+
+exports.removeFavoriteAdvert = async (req, res) => {
+  const { advertId } = req.params; // URL'den ilan ID'si alınır
+  const userId = req.user.id; // Kullanıcı ID'si, genellikle middleware aracılığıyla alınır
+
+  try {
+    // Kullanıcıyı bul
+    const user = await User.findById(userId);
+
+    // İlan favorilerde var mı diye kontrol et
+    const index = user.favoriteAdverts.indexOf(advertId);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: "Advert not found in favorites." });
+    }
+
+    // Favorilerden ilanı çıkar ve kullanıcıyı kaydet
+    user.favoriteAdverts.splice(index, 1);
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Advert removed from favorites." });
+  } catch (error) {
+    console.error("Error removing favorite advert:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
 
 

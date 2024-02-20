@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
   latitude: { type: String, required: true },
   isVerified: { type: Boolean, default:false , required: true },
   actionsHistory: [actionSchema],
+  favoriteAdverts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Advert' }],
   participatedAdverts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Advert' }],
   lostAdverts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Advert' }],
   wonAdverts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Advert' }],
