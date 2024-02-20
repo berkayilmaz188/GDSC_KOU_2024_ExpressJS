@@ -9,7 +9,7 @@ const { sendActivationEmail, sendPasswordResetEmail } = require('../helpers/mail
 exports.register = async (req, res) => {
   try {
     const { email, password, username, phoneNumber, city, location, longitude, latitude, nameUnited } = req.body;
-    
+
      // nameUnited doluysa, bu alanı kullanarak name ve surname'i ayır
      let name = '', surname = '';
      if (nameUnited) {
@@ -287,4 +287,38 @@ exports.userLocationUpdate = async (req, res) => {
 };
 
 
+// Kullanıcı Token Doğrulama ve Bilgilerini Getirme
+exports.verifyTokenAndGetUser = async (req, res) => {
+  try {
+    const userId = req.user.id; // Auth middleware'inden gelen kullanıcı ID'si
+
+    const user = await User.findById(userId, '-password -resetPasswordToken -resetPasswordExpire -wonAdverts -lostAdverts -participatedAdverts -favoriteAdverts'); // Şifre ve diğer hassas bilgiler hariç
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        surname: user.surname,
+        phoneNumber: user.phoneNumber,
+        city: user.city,
+        location: user.location,
+        longitude: user.longitude,
+        latitude: user.latitude,
+        isVerified: user.isVerified,
+        points: user.points,
+        actionsHistory: user.actionsHistory
+      }
+    });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
 

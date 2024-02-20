@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { register, login , activateAccount , resendActivationEmail, forgotPassword , resetPassword} = require('../controllers/userController');
+const { register, login , activateAccount , resendActivationEmail, forgotPassword , resetPassword, verifyTokenAndGetUser} = require('../controllers/userController');
 const { registerValidation, loginValidation , resendActivationEmailValidation , forgotPasswordValidation , resetPasswordValidation} = require('../validaton/authValidation');
 const validateRequest = require('../middlewares/validateRequest');
+const auth = require('../middlewares/authMiddleware');
 
 // Kullanıcı Kaydı Route
 router.post('/register', validateRequest(registerValidation), register);
@@ -19,4 +20,5 @@ router.post('/forgot-password', validateRequest(forgotPasswordValidation), forgo
 // Şifre sıfırlama linki ile yeni şifre belirleme endpoint'i
 router.post('/reset-password/:resetToken', validateRequest(resetPasswordValidation), resetPassword);
 
+router.get('/verifyToken', auth, verifyTokenAndGetUser);
 module.exports = router;

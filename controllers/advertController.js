@@ -421,28 +421,36 @@ exports.getUserAdvertDetails = async (req, res) => {
   try {
     const user = await User.findById(userId).populate({
       path: type, // Dinamik olarak populate edilecek yol (lostAdverts, wonAdverts, participatedAdverts)
-      // select kullanmıyoruz çünkü tüm alanları döndürmek istiyoruz
+      populate: { 
+        path: 'owner', // İlan sahibi bilgisini doldur
+        select: 'username' // Sadece kullanıcı adını döndür
+      }
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    // Belirtilen tipdeki ilanlar yoksa veya boşsa
     if (!user[type] || user[type].length === 0) {
       return res.status(404).json({ success: false, message: `No adverts found for ${type}.` });
     }
 
-    // İlanların tüm detaylarını döndür
+    // İlanların detaylarını ve ilan sahibinin kullanıcı adını döndür
+    const advertsDetails = user[type].map(advert => ({
+      ...advert._doc,
+      owner: advert.owner.username // owner nesnesini kullanıcı adı ile değiştir
+    }));
+
     res.status(200).json({
       success: true,
-      adverts: user[type] // Dinamik olarak ilanların tüm detaylarını döndür
+      adverts: advertsDetails
     });
   } catch (error) {
     console.error(`Error retrieving ${type} adverts details:`, error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
 
 
 exports.getUserActionsHistory = async (req, res) => {
