@@ -307,7 +307,10 @@ exports.viewPublicAdvert = async (req, res) => {
 
   try {
     const advert = await Advert.findById(advertId)
-      .populate('owner', 'username email') // İlan sahibinin bazı bilgilerini getir
+    .populate({
+      path: 'owner',
+      select: 'username' // Sadece username alanını getir
+    })// İlan sahibinin bazı bilgilerini getir
       .populate('participants', 'username'); // Katılımcı bilgilerini getir
 
     if (!advert) {
@@ -326,6 +329,7 @@ exports.viewPublicAdvert = async (req, res) => {
       success: true,
       advert: {
         _id: advert._id,
+        owner: advert.owner.username,
         title: advert.title,
         description: advert.description,
         category: advert.category,
