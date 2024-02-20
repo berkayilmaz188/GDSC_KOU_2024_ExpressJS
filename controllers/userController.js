@@ -189,7 +189,7 @@ exports.login = async (req, res) => {
     const userForResponse = user.toObject();
     delete userForResponse.password; // Şifreyi yanıttan çıkarın
 
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: 3600 }, (err, token) => {
+    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' }, (err, token) => {
       if (err) throw err;
       // Token ile birlikte kullanıcı bilgilerini de döndürün
       res.json({ success: true, token, user: userForResponse });
